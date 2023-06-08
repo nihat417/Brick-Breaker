@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+    <style>
+        #game {
+            position: relative;
+            border: 1px solid #333;
+            margin: 10vh auto
+        }
+
+        #game>* {
+            position: absolute;
+        }
+    </style>
+</head>
+
+<body>
+
+    <script>
+        const speedBall = 0.01;
+        class HTMLElement {
+            constructor(name, width, height, radius, color, left, top, dx, dy) {
+                this.name = name
+                this.w = width
+                this.h = height
+                this.r = radius
+                this.color = color
+                this.x = left
+                this.y = top
+                this.dx = dx
+                this.dy = dy
+            }
+            create(elem) {
+                elem.innerHTML += `<div id=${this.name}></div>`
+                this.show()
+            }
+            show() {
+                this.elem = document.getElementById(this.name),
+                    this.elem.style.width = this.w + 'px'
+                this.elem.style.height = this.h + 'px'
+                this.elem.style.borderRadius = this.r
+                this.elem.style.backgroundColor = this.color
+                this.elem.style.left = this.x + 'px'
+                this.elem.style.top = this.y + 'px'
+            }
+        }
+        const game = new HTMLElement('game', 800, 600, 0, 'white')
+        const ball = new HTMLElement('ball', 30, 30, '50%', 'red', 0, 0, 5, 5)
+        const bar = new HTMLElement('bar', 150, 10, 0, 'blue', 0, 0, 10)
+        const bricks = {
+            bricksCount: 0,
+            destroyedBricks: 0,
+            arr: [],
+            row: 3,
+            col: 4,
+            gap: 10,
+            color: 'orange',
+            create: function (elem) {
+                for (let i = 0; i < this.row; i++) {
+                    for (let j = 0; j < this.col; j++) {
+                        this.bricksCount++;
+                        let id = `b${i}${j}`
+                        let width = (game.w - (this.col + 1) * this.gap) / this.col
+                        let height = width / 2
+                        let left = j * width + (j + 1) * this.gap
+                        let top = i * height + (i + 1) * this.gap
+                        let brick = new HTMLElement(id, width, height, 0, this.color, left, top)
+                        brick.create(elem)
+                        this.arr.push(brick)
+                    }
+                }
+            },
+            collision() {
+                for (let i = 0; i < this.arr.length; i++) {
+                    let brick = this.arr[i];
+                    if (ball.x + ball.w / 2 > brick.x &&
+                        ball.x + ball.w / 2 < brick.x + brick.w &&
+                        ball.y + ball.h > brick.y &&
+                        ball.y < brick.y + brick.h) {
+                        document.getElementById(brick.name).remove()
+                        this.arr.splice(i, 1)
+                        ball.dy *= -1
+                        this.destroyedBricks++;
+                    }
+                }
+
+                if (this.destroyedBricks === this.bricksCount) {
+                    game.win();
+                }
+            }
+        }
+
+        game.win = function () {
+            clearInterval(timer);
+            ball.elem.remove();
+            bar.elem.remove();
+
+            game.elem.style.background = 'green';
+            const winMessage = document.createElement('div');
+            winMessage.innerText = 'You Win:)';
+            winMessage.style.color = 'white';
+            winMessage.style.fontSize = '25px';
+            winMessage.style.textAlign = 'center';
+            winMessage.style.position = 'absolute';
+            winMessage.style.top = '50%';
+            winMessage.style.left = '50%';
+            winMessage.style.transform = 'translate(-50%, -50%)';
+            document.querySelector('body').appendChild(winMessage);
+            game.over();
+        };
+
+        game.lose = function () {
+            clearInterval(timer);
+            ball.elem.remove();
+            bar.elem.remove();
+
+            for (let i = 0; i < bricks.arr.length; i++) {
+                const brick = bricks.arr[i];
+                const brickElem = document.getElementById(brick.name);
+                brickElem.style.visibility = 'hidden';
+            }
+            game.elem.style.background = 'red';
+
+            const loseMessage = document.createElement('div');
+            loseMessage.innerText = 'UDUZDUN';
+            loseMessage.style.color = 'white';
+            loseMessage.style.fontSize = '25px';
+            loseMessage.style.textAlign = 'center';
+            loseMessage.style.position = 'absolute';
+            loseMessage.style.top = '50%';
+            loseMessage.style.left = '50%';
+            loseMessage.style.transform = 'translate(-50%, -50%)';
+            document.querySelector('body').appendChild(loseMessage);
+        };
+
+        game.over = function () {
+            clearInterval(timer)
+            if (bricks.destroyedBricks === bricks.bricksCount) {
+                game.win();
+            } else {
+                game.lose();
+            }
+        }
+        bar.x = (game.w - bar.w) / 2
+        bar.y = game.h - bar.h
+        ball.x = (game.w - ball.w) / 2
+        ball.y = bar.y - ball.h
+        ball.move = function () {
+            if (this.x < 0 || this.x >= game.w - this.w) this.dx *= -1
+            if (this.y < 0 ||
+                this.y > game.h - bar.h - this.h &&
+                this.x > bar.x - this.w / 2 &&
+                this.x < bar.x + bar.w - this.w / 2) this.dy *= -1
+            if (this.y >= game.h - this.h) game.over()
+
+            if (Math.random() < speedBall) {
+                this.dx *= 1.05;
+            }
+
+            this.x += this.dx
+            this.y += this.dy
+            this.show()
+            bricks.collision()
+        }
+
+        bar.move = function (e) {
+            let newX;
+
+            if (e.keyCode == 37) {
+                newX = this.x - 14;
+                if (newX < 0) {
+                    newX = 0;
+                }
+            }
+
+            if (e.keyCode == 39) {
+                newX = this.x + 14;
+                if (newX > game.w - this.w) {
+                    newX = game.w - this.w;//sag teref kenara cixmasn
+                }
+            }
+
+            this.x = newX;
+            this.show();
+        }
+        game.create(document.querySelector("body"))
+        ball.create(game.elem)
+        bar.create(game.elem)
+        bricks.create(game.elem)
+        let timer = setInterval(() => ball.move(), 40)
+        document.onkeydown = (e) => bar.move(e)
+    </script>
+</body>
+
+</html>
